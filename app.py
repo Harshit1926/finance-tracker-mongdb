@@ -10,7 +10,7 @@ import re
 from functools import wraps
 from datetime import datetime, timezone
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 from dotenv import load_dotenv
 
 load_dotenv()
