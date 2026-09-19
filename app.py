@@ -8,9 +8,9 @@ no business logic lives here, only request handling and template rendering.
 import os
 import re
 from functools import wraps
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -38,6 +38,12 @@ finance_agent = FinanceAgent(db)
 transaction_manager = TransactionManager(db, finance_agent=finance_agent)
 filter_service = FilterService(db)
 
+# How long a signup-in-progress ("pending_email") stays valid before the
+# person is forced to restart from /signup. Prevents an old, abandoned
+# session from letting someone land on /verify-otp days later without
+# having just submitted the signup form.
+PENDING_SIGNUP_WINDOW_MINUTES = 15
+
 
 # ---------------- helpers ----------------
 
@@ -45,10 +51,49 @@ PHONE_PATTERN = re.compile(r"^\d{10}$")
 
 
 def is_valid_phone(phone):
-    """Empty/None is fine — phone is optional. If provided, must be exactly 10 digits."""
+    """Empty/None is fine -- phone is optional. If provided, must be exactly 10 digits."""
     if not phone:
         return True
     return bool(PHONE_PATTERN.match(phone.strip()))
+
+
+def start_pending_signup(email):
+    """Call this the moment signup is (re)submitted -- stamps both the
+    email and the time it started, so staleness can be checked later."""
+    session["pending_email"] = email
+    session["pending_email_started_at"] = datetime.now(timezone.utc).isoformat()
+
+
+def get_fresh_pending_email():
+    """Returns the pending email ONLY if step 1 (signup) was genuinely
+    just completed, within PENDING_SIGNUP_WINDOW_MINUTES. Otherwise clears
+    the stale session data and returns None, so the caller redirects back
+    to /signup instead of letting an old session skip straight to step 2."""
+    email = session.get("pending_email")
+    started_at_raw = session.get("pending_email_started_at")
+
+    if not email or not started_at_raw:
+        return None
+
+    try:
+        started_at = datetime.fromisoformat(started_at_raw)
+    except ValueError:
+        session.pop("pending_email", None)
+        session.pop("pending_email_started_at", None)
+        return None
+
+    age = datetime.now(timezone.utc) - started_at
+    if age > timedelta(minutes=PENDING_SIGNUP_WINDOW_MINUTES):
+        session.pop("pending_email", None)
+        session.pop("pending_email_started_at", None)
+        return None
+
+    return email
+
+
+def clear_pending_signup():
+    session.pop("pending_email", None)
+    session.pop("pending_email_started_at", None)
 
 
 def current_user():
@@ -129,7 +174,8 @@ def signup():
             flash(error, "danger")
             return render_template("signup.html")
 
-        session["pending_email"] = user.email
+        # Step 1 genuinely just happened -- stamp email + timestamp together.
+        start_pending_signup(user.email)
         flash("We've sent a 6-digit code to your email.", "success")
         return redirect(url_for("verify_otp"))
 
@@ -138,8 +184,9 @@ def signup():
 
 @app.route("/verify-otp", methods=["GET", "POST"])
 def verify_otp():
-    email = session.get("pending_email")
+    email = get_fresh_pending_email()
     if not email:
+        flash("Please start signup again to receive a new code.", "danger")
         return redirect(url_for("signup"))
 
     if request.method == "POST":
@@ -154,7 +201,7 @@ def verify_otp():
             flash(error, "danger")
             return render_template("verify_otp.html", email=email)
 
-        session.pop("pending_email", None)
+        clear_pending_signup()
         flash("Account verified! You can log in now.", "success")
         return redirect(url_for("login"))
 
@@ -163,8 +210,9 @@ def verify_otp():
 
 @app.route("/resend-otp", methods=["POST"])
 def resend_otp():
-    email = session.get("pending_email")
+    email = get_fresh_pending_email()
     if not email:
+        flash("Please start signup again to receive a new code.", "danger")
         return redirect(url_for("signup"))
 
     try:
