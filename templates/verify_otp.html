@@ -6,6 +6,13 @@
     <div class="auth-brand">Finance Tracker<span class="accent">.</span></div>
     <div class="auth-tagline">Enter the 6-digit code sent to <strong style="color:var(--text)">{{ email }}</strong></div>
 
+    <div class="spam-note" role="note">
+      <span class="spam-note-icon" aria-hidden="true">📬</span>
+      <span>
+        <strong>Can't find the code?</strong> Check your <strong>Spam</strong> or <strong>Junk</strong> folder. First-time senders often land there.
+      </span>
+    </div>
+
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
         <div class="flashes">
