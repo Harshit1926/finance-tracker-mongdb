@@ -44,11 +44,7 @@ class AuthService:
         user.save()
 
         code = self.otp_service.generate(email)
-        self.notifier.notify_async(
-            subject="Your Verification Code",
-            body=f"Your OTP is {code}. It is valid for {self.otp_service.VALIDITY_SECONDS} seconds.",
-            to=email,
-        )
+        self._send_otp_email(email, code)
         return user, None
 
     def verify_signup(self, email, code):
@@ -72,4 +68,21 @@ class AuthService:
         return True, None
 
     def resend_otp(self, email):
-        return self.otp_service.generate(email)
+        """
+        BUGFIX: this previously only called otp_service.generate(email) and
+        returned the code, without ever emailing it -- generate() creates
+        and stores the new OTP but has no knowledge of email sending, so the
+        caller is responsible for actually sending it. start_signup() did
+        this correctly; resend_otp() did not, which is why "Resend code"
+        showed a success flash message but no email ever arrived.
+        """
+        code = self.otp_service.generate(email)
+        self._send_otp_email(email, code)
+        return code
+
+    def _send_otp_email(self, email, code):
+        self.notifier.notify_async(
+            subject="Your Verification Code",
+            body=f"Your OTP is {code}. It is valid for {self.otp_service.VALIDITY_SECONDS} seconds.",
+            to=email,
+        )
