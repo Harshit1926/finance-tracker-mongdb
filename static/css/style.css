@@ -493,6 +493,25 @@ tbody tr:hover { background: rgba(255,255,255,0.015); }
   margin-top: -4px;
 }
 
+/* Permanent notice on the OTP page (not a flash message, never dismissed) */
+.spam-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: var(--gold-wash);
+  border: 1px solid var(--gold-dim);
+  border-left: 3px solid var(--gold);
+  color: var(--text-muted);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  line-height: 1.45;
+  margin: 0 0 16px;
+}
+
+.spam-note strong { color: var(--text); font-weight: 600; }
+.spam-note-icon { font-size: 16px; line-height: 1.3; flex-shrink: 0; }
+
 /* ---------------- Chart containers ---------------- */
 
 .chart-wrap { position: relative; height: 240px; }
