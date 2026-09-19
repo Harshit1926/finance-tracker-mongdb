@@ -1,0 +1,29 @@
+<aside class="sidebar">
+  <div class="brand">
+    <span class="brand-mark">F</span>
+    <span class="brand-name">Finance Tracker</span>
+  </div>
+
+  <nav class="nav-group">
+    {% if session.get('role') == 'user' %}
+      <a href="{{ url_for('user_dashboard') }}"
+         class="nav-link {{ 'active' if request.endpoint == 'user_dashboard' else '' }}">Dashboard</a>
+    {% elif session.get('role') == 'analyst' %}
+      <a href="{{ url_for('analyst_dashboard') }}"
+         class="nav-link {{ 'active' if request.endpoint in ['analyst_dashboard', 'analyst_filter'] else '' }}">Analysis</a>
+    {% elif session.get('role') in ['admin', 'creator'] %}
+      <a href="{{ url_for('admin_dashboard') }}"
+         class="nav-link {{ 'active' if request.endpoint in ['admin_dashboard', 'admin_create', 'admin_update', 'admin_delete'] else '' }}">Accounts</a>
+      <a href="{{ url_for('analyst_dashboard') }}"
+         class="nav-link {{ 'active' if request.endpoint in ['analyst_dashboard', 'analyst_filter'] else '' }}">Analysis</a>
+    {% endif %}
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="identity">
+      <div class="identity-name">{{ session.get('name', 'Account') }}</div>
+      <div class="identity-role">{{ session.get('role', '')|capitalize }}</div>
+    </div>
+    <a href="{{ url_for('logout') }}" class="logout-link">Sign out</a>
+  </div>
+</aside>

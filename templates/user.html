@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Finance Tracker{% endblock %}
+{% block body %}
+<div class="shell">
+  {% include "_sidebar.html" %}
+
+  <main class="main">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="hero-balance">
+      <div>
+        <div class="hero-figure-label">Current balance</div>
+        <div class="hero-figure positive"><span class="currency">₹</span>{{ "%.2f"|format(summary.balance) }}</div>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-label">Total income</div>
+          <div class="hero-stat-value income">₹{{ "%.2f"|format(summary.total_income) }}</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-label">Total expense</div>
+          <div class="hero-stat-value expense">₹{{ "%.2f"|format(summary.total_expense) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">Add a transaction</div>
+        <div class="panel-sub">Record income or an expense with a note.</div>
+        <form method="POST" action="{{ url_for('add_transaction') }}" class="form-grid">
+          <div class="field">
+            <label for="type">Type</label>
+            <select name="type" id="type" required>
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="amount">Amount (₹)</label>
+            <input type="number" step="0.01" min="0.01" name="amount" id="amount" placeholder="0.00" required>
+          </div>
+          <div class="field">
+            <label for="category-select">Category</label>
+            <select name="category" id="category-select" required>
+              {% for cat in categories %}
+                <option value="{{ cat }}">{{ cat }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field" id="custom-category-field" style="display:none;">
+            <label for="custom_category">Specify category</label>
+            <input type="text" name="custom_category" id="custom_category" placeholder="e.g. Eaten outside">
+          </div>
+          <div class="field">
+            <label for="date">Date</label>
+            <input type="date" name="date" id="date" value="{{ today }}" required>
+          </div>
+          <div class="field full">
+            <label for="note">Note</label>
+            <textarea name="note" id="note" placeholder="Optional note — where you spent, why, etc."></textarea>
+          </div>
+          <div class="field full">
+            <button type="submit" class="btn btn-gold btn-block">Add transaction</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Where it went</div>
+        <div class="panel-sub">Expense breakdown by category, all time.</div>
+        {% if expense_breakdown %}
+        <div class="chart-wrap">
+          <canvas id="expenseDoughnut"></canvas>
+        </div>
+        <div class="legend-list">
+          {% for cat, amt in expense_breakdown.items() %}
+          <div class="legend-row">
+            <div class="legend-label">
+              <span class="legend-dot" style="background: {{ category_colors[cat] }}"></span>
+              {{ cat }}
+            </div>
+            <div class="legend-value">₹{{ "%.0f"|format(amt) }}</div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">No expenses recorded yet. Add one to see the breakdown here.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if monthly_trend.labels %}
+    <div class="panel section-spacer">
+      <div class="panel-title">Monthly trend</div>
+      <div class="panel-sub">Income vs. expense over recent months.</div>
+      <div class="chart-wrap tall">
+        <canvas id="trendLine"></canvas>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <div class="panel-title">Recent transactions</div>
+      <div class="panel-sub">Your last {{ transactions|length }} entries.</div>
+
+      {% if transactions %}
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Note</th>
+            <th>Type</th>
+            <th style="text-align:right;">Amount</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for txn in transactions %}
+          <tr>
+            <td>{{ txn.date.strftime("%d %b %Y") }}</td>
+            <td>{{ txn.display_category() }}</td>
+            <td style="color: var(--text-muted);">{{ txn.note or "—" }}</td>
+            <td>
+              <span class="badge {% if txn.type == 'income' %}badge-role-analyst{% else %}badge-role-user{% endif %}">
+                {{ txn.type|capitalize }}
+              </span>
+            </td>
+            <td style="text-align:right;" class="{{ 'amount-pos' if txn.type == 'income' else 'amount-neg' }}">
+              {{ '+' if txn.type == 'income' else '−' }}₹{{ "%.2f"|format(txn.amount) }}
+            </td>
+            <td style="text-align:right;">
+              <form method="POST" action="{{ url_for('delete_transaction', txn_id=txn.id_str) }}"
+                    onsubmit="return confirm('Delete this transaction?');">
+                <button type="submit" class="btn btn-danger">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state">No transactions yet. Add your first one above.</div>
+      {% endif %}
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  {% if expense_breakdown %}
+  (function () {
+    const breakdown = {{ expense_breakdown|tojson }};
+    const colorMap = {{ category_colors|tojson }};
+    const labels = Object.keys(breakdown);
+    const values = Object.values(breakdown);
+    const colors = labels.map((c) => colorMap[c] || "#8d99ae");
+    buildExpenseDoughnut("expenseDoughnut", labels, values, colors);
+  })();
+  {% endif %}
+
+  {% if monthly_trend.labels %}
+  buildTrendLine(
+    "trendLine",
+    {{ monthly_trend.labels|tojson }},
+    {{ monthly_trend.income|tojson }},
+    {{ monthly_trend.expense|tojson }}
+  );
+  {% endif %}
+</script>
+{% endblock %}

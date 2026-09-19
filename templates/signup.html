@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Create account — Finance Tracker{% endblock %}
+{% block body %}
+<div class="auth-shell">
+  <div class="auth-card">
+    <div class="auth-brand">Finance Tracker<span class="accent">.</span></div>
+    <div class="auth-tagline">Create your account to start tracking.</div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form class="auth-form" method="POST" action="{{ url_for('signup') }}">
+      <div class="field">
+        <label for="name">Full name</label>
+        <input type="text" id="name" name="name" placeholder="Your name" required autofocus>
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com" required>
+      </div>
+      <div class="field">
+        <label for="phone">Mobile number <span style="color:var(--text-faint)">(reference only)</span></label>
+        <input type="tel" id="phone" name="phone" placeholder="10-digit mobile number"
+               maxlength="10" pattern="[0-9]{10}" inputmode="numeric"
+               title="Enter exactly 10 digits">
+      </div>
+      <div class="field">
+        <label for="dob">Date of birth</label>
+        <input type="date" id="dob" name="dob">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <div class="password-field">
+          <input type="password" id="password" name="password" placeholder="At least 8 characters" required minlength="8">
+          <button type="button" class="password-toggle" aria-label="Show password">
+            <svg class="icon-eye" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg class="icon-eye-off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+          </button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-gold btn-block" style="margin-top: 6px;">Send verification code</button>
+    </form>
+
+    <div class="auth-footer">
+      Already have an account? <a href="{{ url_for('login') }}">Sign in</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

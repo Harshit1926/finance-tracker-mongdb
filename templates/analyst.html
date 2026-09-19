@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Analysis — Finance Tracker{% endblock %}
+{% block body %}
+<div class="shell">
+  {% include "_sidebar.html" %}
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <div class="page-title">Analysis</div>
+        <div class="page-sub">Filter any user's transactions for review.</div>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="panel section-spacer">
+      <div class="panel-title">Filter transactions</div>
+      <div class="panel-sub">Choose a user and narrow by date, category, or type.</div>
+
+      <form method="POST" action="{{ url_for('analyst_filter') }}" class="form-grid">
+        <div class="field">
+          <label for="user_email">User</label>
+          <select name="user_email" id="user_email" required>
+            <option value="">Select a user…</option>
+            {% for u in users %}
+              <option value="{{ u.email }}" {% if u.email == selected_email %}selected{% endif %}>
+                {{ u.name or u.email }} ({{ u.email }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label for="type">Type</label>
+          <select name="type" id="type">
+            <option value="">Any</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="start_date">From</label>
+          <input type="date" name="start_date" id="start_date">
+        </div>
+        <div class="field">
+          <label for="end_date">To</label>
+          <input type="date" name="end_date" id="end_date">
+        </div>
+        <div class="field full">
+          <label for="category">Category</label>
+          <select name="category" id="category">
+            <option value="">Any category</option>
+            {% for cat in categories %}
+              <option value="{{ cat }}">{{ cat }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field full">
+          <button type="submit" class="btn btn-gold btn-block">Apply filters</button>
+        </div>
+      </form>
+    </div>
+
+    {% if summary is not none %}
+    <div class="hero-balance">
+      <div>
+        <div class="hero-figure-label">Filtered balance</div>
+        <div class="hero-figure positive"><span class="currency">₹</span>{{ "%.2f"|format(summary.balance) }}</div>
+      </div>
+      <div class="hero-stats">
+        <div class="hero-stat">
+          <div class="hero-stat-label">Income</div>
+          <div class="hero-stat-value income">₹{{ "%.2f"|format(summary.total_income) }}</div>
+        </div>
+        <div class="hero-stat">
+          <div class="hero-stat-label">Expense</div>
+          <div class="hero-stat-value expense">₹{{ "%.2f"|format(summary.total_expense) }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Results</div>
+      <div class="panel-sub">{{ filtered|length }} matching transactions for {{ selected_email }}.</div>
+
+      {% if filtered %}
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Note</th>
+            <th>Type</th>
+            <th style="text-align:right;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for txn in filtered %}
+          <tr>
+            <td>{{ txn.date.strftime("%d %b %Y") }}</td>
+            <td>{{ txn.category }}{% if txn.custom_category %} · {{ txn.custom_category }}{% endif %}</td>
+            <td style="color: var(--text-muted);">{{ txn.note or "—" }}</td>
+            <td>
+              <span class="badge {% if txn.type == 'income' %}badge-role-analyst{% else %}badge-role-user{% endif %}">
+                {{ txn.type|capitalize }}
+              </span>
+            </td>
+            <td style="text-align:right;" class="{{ 'amount-pos' if txn.type == 'income' else 'amount-neg' }}">
+              {{ '+' if txn.type == 'income' else '−' }}₹{{ "%.2f"|format(txn.amount) }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state">No transactions match these filters.</div>
+      {% endif %}
+    </div>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}

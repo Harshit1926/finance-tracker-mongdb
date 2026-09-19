@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Accounts — Finance Tracker{% endblock %}
+{% block body %}
+<div class="shell">
+  {% include "_sidebar.html" %}
+
+  <main class="main">
+    <div class="page-head">
+      <div>
+        <div class="page-title">Accounts</div>
+        <div class="page-sub">Create, update, and remove user accounts.</div>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flashes">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="panel-title">Create account</div>
+        <div class="panel-sub">New accounts are pre-verified — no OTP needed.</div>
+        <form method="POST" action="{{ url_for('admin_create') }}" class="form-grid">
+          <div class="field">
+            <label for="c_name">Full name</label>
+            <input type="text" name="name" id="c_name" required>
+          </div>
+          <div class="field">
+            <label for="c_email">Email</label>
+            <input type="email" name="email" id="c_email" required>
+          </div>
+          <div class="field">
+            <label for="c_phone">Phone</label>
+            <input type="tel" name="phone" id="c_phone" placeholder="10-digit mobile number"
+                   maxlength="10" pattern="[0-9]{10}" inputmode="numeric"
+                   title="Enter exactly 10 digits">
+          </div>
+          <div class="field">
+            <label for="c_role">Role</label>
+            <select name="role" id="c_role" required>
+              {% for r in assignable_roles %}
+                <option value="{{ r }}">{{ role_labels[r] }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field full">
+            <label for="c_password">Temporary password</label>
+            <div class="password-field">
+              <input type="password" name="password" id="c_password" required minlength="8">
+              <button type="button" class="password-toggle" aria-label="Show password">
+                <svg class="icon-eye" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="icon-eye-off" viewBox="0 0 24 24"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="field full">
+            <button type="submit" class="btn btn-gold btn-block">Create account</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Update account</div>
+        <div class="panel-sub">Change name, phone, date of birth, or role.</div>
+        <form method="POST" action="{{ url_for('admin_update') }}" class="form-grid">
+          <div class="field full">
+            <label for="u_email">Account email</label>
+            <input type="email" name="email" id="u_email" placeholder="user@example.com" required>
+          </div>
+          <div class="field">
+            <label for="u_field">Field</label>
+            <select name="field" id="u_field" required>
+              <option value="name">Name</option>
+              <option value="phone">Phone</option>
+              <option value="dob">Date of birth</option>
+              <option value="role">Role</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="u_value">New value</label>
+            <input type="text" name="value" id="u_value" placeholder="New value" required>
+          </div>
+          <div class="field full">
+            <button type="submit" class="btn btn-ghost btn-block">Update account</button>
+          </div>
+        </form>
+
+        <div class="panel-title" style="margin-top: 26px;">Delete account</div>
+        <div class="panel-sub">This cannot be undone. All of that user's transactions are removed too.</div>
+        <form method="POST" action="{{ url_for('admin_delete') }}"
+              onsubmit="return confirm('Delete this account permanently?');" class="form-grid">
+          <div class="field full">
+            <input type="email" name="email" placeholder="Account email to delete" required>
+          </div>
+          <div class="field full">
+            <button type="submit" class="btn btn-danger btn-block" style="padding: 10px;">Delete account</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">All accounts</div>
+      <div class="panel-sub">{{ users|length }} total.</div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Phone</th>
+            <th>Role</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr>
+            <td>{{ u.name or "—" }}</td>
+            <td>{{ u.email }}</td>
+            <td>{{ u.phone or "—" }}</td>
+            <td><span class="badge badge-role-{{ u.role.name }}">{{ role_labels[u.role.name] }}</span></td>
+            <td>{{ u.created_at.strftime("%d %b %Y") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</div>
+{% endblock %}
